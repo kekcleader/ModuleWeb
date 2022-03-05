@@ -1,5 +1,7 @@
 How to write a simple web site in Oberon.
 
+![Free Oberon screenshot](screenshot.png)
+
 # Setting up Apache2 + CGI + Free Oberon
 
 1. Use [Free Oberon](https://free.oberon.org/en)
