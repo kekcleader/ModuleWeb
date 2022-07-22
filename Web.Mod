@@ -1,0 +1,13 @@
+MODULE Web;
+
+PROCEDURE Init*;
+BEGIN
+
+END Init;
+
+PROCEDURE Close*;
+BEGIN
+
+END Close;
+
+END Web.

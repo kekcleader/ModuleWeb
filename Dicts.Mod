@@ -1,5 +1,5 @@
 MODULE Dicts;
-IMPORT Out;
+IMPORT Out, Strings;
 
 CONST
   keyLen* = 128;
@@ -40,6 +40,17 @@ TYPE
     body: Lock
   END;
 
+PROCEDURE Copy(s: ARRAY OF CHAR; VAR to: ARRAY OF CHAR);
+VAR i, len: INTEGER;
+BEGIN
+  len := LEN(s);
+  IF len > LEN(to) THEN len := LEN(to) END;
+  DEC(len);
+  i := 0;
+  WHILE (i < len) & (s[i] # 0X) DO to[i] := s[i]; INC(i) END;
+  to[i] := 0X
+END Copy;
+
 PROCEDURE Len*(item: Item): INTEGER;
 VAR n: INTEGER;
 BEGIN
@@ -49,23 +60,23 @@ BEGIN
   END
 RETURN n END Len;
 
-PROCEDURE NewStr(val: ARRAY OF CHAR): Str;
+PROCEDURE NewStr*(val: ARRAY OF CHAR): Str;
 VAR s: Str;
 BEGIN NEW(s); s.key := ''; s.val := val
 RETURN s END NewStr;
 
-PROCEDURE NewInt(val: INTEGER): Int;
+PROCEDURE NewInt*(val: INTEGER): Int;
 VAR i: Int;
 BEGIN NEW(i); i.key := ''; i.val := val
 RETURN i END NewInt;
 
-PROCEDURE NewArray(): Array;
+PROCEDURE NewArray*(): Array;
 VAR a: Array;
 BEGIN NEW(a); a.key := ''; a.len := 0; NEW(a.body);
   a.body.prev := a.body; a.body.next := a.body; a.body.parent := a
 RETURN a END NewArray;
 
-PROCEDURE NewDict(): Dict;
+PROCEDURE NewDict*(): Dict;
 VAR d: Dict;
 BEGIN NEW(d); d.key := ''; d.len := 0; NEW(d.body);
   d.body.prev := d.body; d.body.next := d.body; d.body.parent := d
@@ -110,8 +121,7 @@ END Append;
 
 (** Sets item v for the given key inside d,
     replaces the previous item. *)
-
-PROCEDURE Set(d: Dict; key: ARRAY OF CHAR; v: Item);
+PROCEDURE SetItem*(d: Dict; key: ARRAY OF CHAR; v: Item);
 VAR p: Item;
 BEGIN
   Remove(v);
@@ -132,7 +142,15 @@ BEGIN
     v.prev.next := v;
     v.next.prev := v
   END
+END SetItem;
+
+PROCEDURE Set*(d: Dict; key, val: ARRAY OF CHAR);
+BEGIN SetItem(d, key, NewStr(val))
 END Set;
+
+PROCEDURE SetInt*(d: Dict; key: ARRAY OF CHAR; val: INTEGER);
+BEGIN SetItem(d, key, NewInt(val))
+END SetInt;
 
 (** Returns nth item of array a *)
 PROCEDURE ArrayGet(a: Array; n: INTEGER): Item;
@@ -156,14 +174,47 @@ BEGIN
   END
 RETURN v END DictGet;
 
-PROCEDURE Get(coll: Item; n: INTEGER): Item;
+PROCEDURE GetNthItem*(coll: Item; n: INTEGER): Item;
 VAR v: Item;
 BEGIN
   IF coll IS Array THEN v := ArrayGet(coll(Array), n)
   ELSIF coll IS Dict THEN v := DictGet(coll(Dict), n)
   ELSE ASSERT(FALSE)
   END
-RETURN v END Get;
+RETURN v END GetNthItem;
+
+PROCEDURE GetItem*(d: Dict; key: ARRAY OF CHAR): Item;
+VAR p: Item;
+BEGIN
+  p := d.body.next;
+  WHILE (p # d.body) & (p.key # key) DO p := p.next END;
+  IF p = d.body THEN p := NIL END
+RETURN p END GetItem;
+
+PROCEDURE Exists*(d: Dict; key: ARRAY OF CHAR): BOOLEAN;
+RETURN GetItem(d, key) # NIL END Exists;
+
+PROCEDURE Get*(d: Dict; key: ARRAY OF CHAR; VAR val: ARRAY OF CHAR);
+VAR item: Item;
+BEGIN
+  item := GetItem(d, key);
+  IF (item # NIL) & (item IS Str) THEN
+    Copy(item(Str).val, val) (*!FIXME convert other values to str *)
+  ELSE
+    val[0] := 0X
+  END
+END Get;
+
+PROCEDURE GetInt*(d: Dict; key: ARRAY OF CHAR; VAR val: INTEGER);
+VAR item: Item;
+BEGIN
+  item := GetItem(d, key);
+  IF (item # NIL) & (item IS Int) THEN
+    val := item(Int).val (*!FIXME Переделать str в int, если там-таки str*)
+  ELSE
+    val := -1
+  END
+END GetInt;
 
 PROCEDURE^ PrintEx(v: Item; format: BOOLEAN; indent: INTEGER);
 
@@ -220,11 +271,11 @@ BEGIN
   END
 END PrintEx;
 
-PROCEDURE Print(v: Item);
+PROCEDURE Print*(v: Item);
 BEGIN PrintEx(v, FALSE, 0)
 END Print;
 
-PROCEDURE PrintF(v: Item);
+PROCEDURE PrintF*(v: Item);
 BEGIN PrintEx(v, TRUE, 0)
 END PrintF;
 
@@ -245,13 +296,12 @@ BEGIN
 
   d := NewDict();
   x := NewInt(5);
-  Set(d, 'рост', x);
+  SetItem(d, 'рост', x);
   x := NewInt(15);
-  Set(d, 'возраст', x);
-  s := NewStr('дуа');
-  Set(d, 'Какая-нибудь', s);
+  SetItem(d, 'возраст', x);
+  Set(d, 'Какая-нибудь', 'дуа');
   s := NewStr('дуачок');
-  Set(d, 'или', s);
+  SetItem(d, 'или', s);
   Out.Ln;
 
 
@@ -259,37 +309,37 @@ BEGIN
   Out.Ln;
   Out.Ln;
 
-  Set(d, 'массиу', a);
+  SetItem(d, 'массиу', a);
 
   Print(d);
   Out.Ln;
   Out.Ln;
 
   s := NewStr('турачок');
-  Set(d, 'или', s);
+  SetItem(d, 'или', s);
 
   a := NewArray();
-  Set(d, 'пустота1', a);
+  SetItem(d, 'пустота1', a);
 
   d2 := NewDict();
-  Set(d, 'пустота2', d2);
+  SetItem(d, 'пустота2', d2);
 
   a := NewArray();
   Append(a, NewInt(7));
-  Set(d, 'одно1', a);
+  SetItem(d, 'одно1', a);
 
   d2 := NewDict();
   a := NewArray();
-  Set(d2, 'ключ', NewStr('значение'));
+  SetItem(d2, 'ключ', NewStr('значение'));
   Append(a, d2);
-  Set(d, 'одно2', a);
+  SetItem(d, 'одно2', a);
 
   d2 := NewDict();
-  Set(d2, 'а', NewStr('ищщё'));
-  Set(d2, 'Айван', NewStr('Зэтэрибл'));
-  Set(d, 'два2', d2);
+  SetItem(d2, 'а', NewStr('ищщё'));
+  SetItem(d2, 'Айван', NewStr('Зэтэрибл'));
+  SetItem(d, 'два2', d2);
 
-  Set(d, 'z', z);
+  SetItem(d, 'z', z);
 
   PrintF(d);
   Out.Ln;
@@ -311,13 +361,9 @@ BEGIN
   Print(m); Out.Ln; Out.Ln
 END Test2;
 
-BEGIN
-  Test
+(*BEGIN
+  Test*)
 END Dicts.
-
-
-
-
 
 
 (*    ПРИМЕР ИСПОЛЬЗОВАНИЯ

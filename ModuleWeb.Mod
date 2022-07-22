@@ -1,5 +1,5 @@
 MODULE ModuleWeb;
-IMPORT Out, Env;
+IMPORT Out, Env, Web, WebGet;
 
 PROCEDURE WriteHeaders;
 BEGIN
@@ -8,13 +8,26 @@ BEGIN
   Out.Ln
 END WriteHeaders;
 
-(*
 PROCEDURE HandleForm;
+VAR name: ARRAY 80 OF CHAR;
+  height: INTEGER;
 BEGIN
   WriteHeaders;
   Out.String('<!DOCTYPE html>'); Out.Ln;
   Out.String('<meta charset="utf8">'); Out.Ln;
-  Out.String('<h1>СТРАНИЦА НЕ НАЙДЕНА. Hello world! Danilus, привет!</h1>'); Out.Ln
+  Out.String('<h1>СТРАНИЦА НЕ НАЙДЕНА. Hello world! Danilus, привет!</h1>'); Out.Ln;
+
+  WebGet.Get('name', name);
+  WebGet.GetInt('height', height);
+
+  Out.String('Вас зовут '); Out.String(name);
+  IF height < 54 THEN
+    Out.String(' и вы коротышка.')
+  ELSE
+    Out.String(' и вы довольно высоки.')
+  END;
+  Out.String(' Ибо рост ваш &mdash; '); Out.Int(height, 0); Out.Char('.');
+  Out.Ln
 END HandleForm;
 
 PROCEDURE ShowForm;
@@ -29,7 +42,6 @@ BEGIN
   Out.String('<input type="submit" value="Отправить">'); Out.Ln;
   Out.String('</form>'); Out.Ln
 END ShowForm;
-*)
 
 PROCEDURE TestEnv;
 VAR count, i: INTEGER;
@@ -58,8 +70,13 @@ END TestEnv;
 
 PROCEDURE Do;
 BEGIN
-  TestEnv
-  (*ShowForm*)
+  Web.Init;
+  IF WebGet.Exists('name') & WebGet.Exists('height') THEN
+    HandleForm
+  ELSE
+    ShowForm
+  END;
+  Web.Close
 END Do;
 
 BEGIN
